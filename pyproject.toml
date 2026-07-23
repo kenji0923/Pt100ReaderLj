@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pt100-reader-lj"
+version = "0.1.0"
+description = "Pt100 measurements with a LabJack U6 Pro and Mux80"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "Pt100ReaderLj contributors"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = ["PyYAML>=6.0,<7"]
+
+[project.optional-dependencies]
+labjack = ["LabJackPython>=2.1.0,<3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

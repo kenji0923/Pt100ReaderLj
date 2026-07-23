@@ -1,0 +1,164 @@
+# Pt100ReaderLj channel configuration
+#
+# vexc_v is the nominal global excitation and is useful for diagnostics only.
+# RTD resistance is calculated from Rref * Vrtd / Vref, not from vexc_v.
+
+schema_version: 1
+
+global:
+  vexc_v: 0.160
+
+device:
+  model: U6-Pro
+  mux: Mux80
+  serial: 360026137
+  differential_range_v: 0.1
+  differential_min_v: -0.106
+  differential_max_v: 0.101
+  overrange_margin_v: 0.0002
+  gain_index: 2
+  resolution_index: 12
+  settling_factor: 0
+  samples: 10
+  minimum_drop_voltage_v: 0.001
+
+sensors:
+  - id: 1
+    name: pt100_01
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 48, negative: 56}
+    rtd_input: {positive: 84, negative: 92}
+
+  - id: 2
+    name: pt100_02
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 49, negative: 57}
+    rtd_input: {positive: 85, negative: 93}
+
+  - id: 3
+    name: pt100_03
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 50, negative: 58}
+    rtd_input: {positive: 86, negative: 94}
+
+  - id: 4
+    name: pt100_04
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 51, negative: 59}
+    rtd_input: {positive: 87, negative: 95}
+
+  - id: 5
+    name: pt100_05
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 52, negative: 60}
+    rtd_input: {positive: 96, negative: 104}
+
+  - id: 6
+    name: pt100_06
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 53, negative: 61}
+    rtd_input: {positive: 97, negative: 105}
+
+  - id: 7
+    name: pt100_07
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 54, negative: 62}
+    rtd_input: {positive: 98, negative: 106}
+
+  - id: 8
+    name: pt100_08
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 55, negative: 63}
+    rtd_input: {positive: 99, negative: 107}
+
+  - id: 9
+    name: pt100_09
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 64, negative: 72}
+    rtd_input: {positive: 100, negative: 108}
+
+  - id: 10
+    name: pt100_10
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 65, negative: 73}
+    rtd_input: {positive: 101, negative: 109}
+
+  - id: 11
+    name: pt100_11
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 66, negative: 74}
+    rtd_input: {positive: 102, negative: 110}
+
+  - id: 12
+    name: pt100_12
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 67, negative: 75}
+    rtd_input: {positive: 103, negative: 111}
+
+  - id: 13
+    name: pt100_13
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 68, negative: 76}
+    rtd_input: {positive: 112, negative: 120}
+
+  - id: 14
+    name: pt100_14
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 69, negative: 77}
+    rtd_input: {positive: 113, negative: 121}
+
+  - id: 15
+    name: pt100_15
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 70, negative: 78}
+    rtd_input: {positive: 114, negative: 122}
+
+  - id: 16
+    name: pt100_16
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 71, negative: 79}
+    rtd_input: {positive: 115, negative: 123}
+
+  - id: 17
+    name: pt100_17
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 80, negative: 88}
+    rtd_input: {positive: 116, negative: 124}
+
+  - id: 18
+    name: pt100_18
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 81, negative: 89}
+    rtd_input: {positive: 117, negative: 125}
+
+  - id: 19
+    name: pt100_19
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 82, negative: 90}
+    rtd_input: {positive: 118, negative: 126}
+
+  - id: 20
+    name: pt100_20
+    enabled: true
+    rref_ohms: 140.0
+    rref_input: {positive: 83, negative: 91}
+    rtd_input: {positive: 119, negative: 127}
