@@ -20,6 +20,11 @@ dist/
 coverage.xml
 htmlcov/
 
+# Console runtime state (machine-local settings and test reports)
+config/console.yaml
+config/console.tmp
+reports/
+
 # Local editor, agent, and OS files
 .agents/
 .idea/

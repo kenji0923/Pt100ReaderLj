@@ -1,0 +1,21 @@
+# systemd unit for the Pt100 web console.
+# Adjust WorkingDirectory/ExecStart paths, then:
+#   sudo cp deploy/pt100-console.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now pt100-console
+
+[Unit]
+Description=Pt100 web console (LabJack U6 Pro + Mux80)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pt100
+WorkingDirectory=/opt/pt100readerlj
+ExecStart=/opt/pt100readerlj/.venv/bin/python -m pt100_console --config config/console.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -140,6 +140,22 @@ When a sensor fails measurement validation or the Vexc sum check, an additional
 failure-only table prints every raw Vref, Vrtd, and voltage sum in volts with
 the associated validation error.
 
+## Web console
+
+A single-process web console (no dependencies beyond PyYAML) provides live
+monitoring, per-channel configuration with default-following overrides,
+per-drop auto-ranging, Telegraf output, and a channel-test feature:
+
+```shell
+python -m pt100_console --config config/console.yaml
+```
+
+The configuration file is created on first run; polling and telemetry start
+Off so the console can be configured before any data is sent. Open
+`http://localhost:8090/` (port per `config/console.yaml`). The design is
+documented in [`docs/console-design.md`](docs/console-design.md); a systemd
+unit example is in [`deploy/pt100-console.service`](deploy/pt100-console.service).
+
 ## Run unit tests
 
 No LabJack is required for the unit tests:

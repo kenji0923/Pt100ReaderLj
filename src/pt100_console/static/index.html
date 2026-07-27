@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pt100 Console</title>
+<style>
+  :root {
+    --bg: #f3f6f7; --surface: #ffffff; --surface2: #eef3f4; --ink: #16242a;
+    --muted: #5a6c74; --line: #d9e2e6; --accent: #146b7a; --accent-soft: #e3eff1;
+    --ok: #1b7a45; --ok-bg: #e2f2e8; --ng: #be3a2e; --ng-bg: #f9e7e4;
+    --off: #7a8a91; --off-bg: #eceff1; --pend-ink: #8a6b04; --conf-ink: #2563eb;
+    --mono: "Consolas", "Cascadia Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1619; --surface: #152025; --surface2: #1a272d; --ink: #dce7ea;
+      --muted: #8fa3ab; --line: #24343b; --accent: #55b7c4; --accent-soft: #14333a;
+      --ok: #4cc98a; --ok-bg: #123526; --ng: #f07a6c; --ng-bg: #40201c;
+      --off: #7a8a91; --off-bg: #202b30; --pend-ink: #e6b13a; --conf-ink: #7aa8f8;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 14px; line-height: 1.55;
+  }
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 14px 22px 0; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+  .brand .sub { color: var(--muted); font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .chip {
+    font-size: 11.5px; color: var(--muted); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 3px; padding: 2px 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .chip.err { color: var(--ng); border-color: var(--ng); }
+  .tabs { display: flex; gap: 2px; margin: 12px 0 0; padding: 0 22px; border-bottom: 1px solid var(--line); }
+  .tabs button {
+    appearance: none; background: none; border: none; cursor: pointer; font: inherit;
+    font-weight: 600; color: var(--muted); padding: 8px 16px 9px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .syncbar { padding: 6px 22px 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .syncbar.b-pend { color: var(--pend-ink); }
+  .syncbar.b-conf { color: var(--conf-ink); }
+  .syncbar.b-err { color: var(--ng); }
+  .minibtn {
+    font: inherit; font-size: 11px; line-height: 1.4; padding: 0 8px; margin-left: 6px;
+    border: 1px solid currentColor; border-radius: 3px; background: none; color: inherit; cursor: pointer;
+  }
+  .minibtn:hover { background: rgba(224, 161, 6, 0.15); }
+  .minibtn:focus-visible { outline: 2px solid var(--accent); }
+  main { padding: 12px 22px 40px; display: grid; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; padding: 12px 16px 0; }
+  .eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase; }
+  .card-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .card-head .note { color: var(--muted); font-size: 12px; }
+  .card-body { padding: 12px 16px 16px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 18px; }
+  .field { display: grid; gap: 4px; align-content: start; min-width: 0; }
+  .field > label { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .field .row { display: flex; align-items: center; gap: 6px; }
+  .field > select.ctl { width: 100%; }
+  .fieldrow2 { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px 18px; }
+  .ctl {
+    font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px;
+    min-height: 30px; max-width: 100%;
+  }
+  select.ctl { padding-right: 4px; }
+  .ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+  .ctl.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .unit { color: var(--muted); font-size: 12px; }
+  .calc {
+    grid-column: 1 / -1; background: var(--accent-soft); border: 1px solid var(--line);
+    border-radius: 3px; padding: 8px 12px; font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  .calc b { color: var(--accent); }
+  .form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+  .form-foot .note { color: var(--muted); font-size: 12px; }
+  .btn {
+    appearance: none; font: inherit; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--bg); border: 1px solid var(--accent);
+    border-radius: 3px; padding: 6px 18px; text-decoration: none; display: inline-block;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .btn[disabled] { opacity: 0.5; cursor: default; }
+  .tblwrap { overflow-x: auto; border-top: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th {
+    text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 600;
+    padding: 6px 10px; white-space: nowrap; background: var(--surface2);
+    border-bottom: 1px solid var(--line);
+  }
+  thead tr.groups th {
+    font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); border-bottom: none; padding-bottom: 0;
+  }
+  thead tr.groups th.sep, tbody td.sep, thead tr:not(.groups) th.sep { border-left: 1px solid var(--line); }
+  tbody td { padding: 5px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody tr.is-off td { color: var(--muted); }
+  td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  td.id { font-family: var(--mono); color: var(--muted); }
+  td.rng { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td .ctl { font-size: 12.5px; min-height: 27px; padding: 2px 6px; }
+  .ovdot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-right: 5px; vertical-align: 1px; visibility: hidden;
+  }
+  .ovdot.on { visibility: visible; }
+  select.ctl.overridden { border-color: var(--accent); }
+  .ctl.p-pending { border-color: #E0A106; background: rgba(224, 161, 6, 0.16); }
+  .ctl.p-confirm { border-color: #3B82F6; background: rgba(59, 130, 246, 0.14); }
+  .ctl.p-reject  { border-color: #D2222D; background: rgba(210, 34, 45, 0.12); }
+  input.ctl.tagin { width: 170px; font-family: var(--mono); font-size: 12px; }
+  input.ctl.namein { width: 104px; font-family: var(--mono); font-size: 12px; }
+  input.ctl.destin { width: 165px; font-family: var(--mono); font-size: 12px; }
+  input.ctl.bucketin { width: 110px; font-family: var(--mono); font-size: 12px; }
+  input.ctl.intin { width: 64px; }
+  .sw { position: relative; display: inline-block; width: 34px; height: 19px; cursor: pointer; flex: 0 0 34px; }
+  .sw input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .sw span { position: absolute; inset: 0; border-radius: 10px; background: var(--off); transition: background 0.15s; }
+  .sw span::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px;
+    border-radius: 50%; background: #fff; transition: transform 0.15s;
+  }
+  .sw input:checked + span { background: var(--ok); }
+  .sw input:checked + span::after { transform: translateX(15px); }
+  .sw input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .sw span, .sw span::after { transition: none; } }
+  .pill {
+    display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 3px;
+    padding: 1px 8px; letter-spacing: 0.04em;
+  }
+  .pill.ok  { color: var(--ok);  background: var(--ok-bg); }
+  .pill.ng  { color: var(--ng);  background: var(--ng-bg); }
+  .pill.off { color: var(--off); background: var(--off-bg); }
+  .reason { font-size: 11px; color: var(--ng); white-space: normal; max-width: 230px; line-height: 1.35; margin-top: 2px; }
+  td.temp { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 14px; font-weight: 600; }
+  td.time { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+  footer { padding: 0 22px 28px; color: var(--muted); font-size: 12px; }
+  footer code { font-family: var(--mono); font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>Pt100 Console</h1>
+    <span class="sub">LabJack U6-Pro + Mux80</span>
+  </div>
+  <div class="chips">
+    <span class="chip">console <b id="c-name">…</b></span>
+    <span class="chip" id="c-hw">U6-Pro <b>…</b></span>
+    <span class="chip">Acquiring <b id="c-acq">…</b></span>
+    <span class="chip">Cycle <b id="c-cycle">—</b></span>
+    <span class="chip" id="c-tlg">Telegraf <b>…</b></span>
+    <span class="chip">req <b id="c-req">0</b></span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="basic">Basic settings</button>
+  <button role="tab" aria-selected="false" data-tab="advanced">Advanced</button>
+</nav>
+
+<div id="syncbar" class="syncbar" role="status">Connecting…</div>
+
+<main>
+  <section id="tab-basic">
+    <section class="card">
+      <div class="card-head">
+        <span class="eyebrow">Defaults</span>
+        <h2>Default settings</h2>
+        <span class="note">Channels without overrides follow these values · changes apply instantly</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="dpoll">Polling</label>
+            <div class="row">
+              <label class="sw"><input id="dpoll" type="checkbox"
+                data-scope="defaults" data-key="polling_enabled" data-type="bool"><span></span></label>
+              <span class="unit">master enable for acquisition</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="dtm">Telemetry</label>
+            <div class="row">
+              <label class="sw"><input id="dtm" type="checkbox"
+                data-scope="defaults" data-key="telemetry_enabled" data-type="bool"><span></span></label>
+              <span class="unit">gates Telegraf output only</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="dint">Polling interval [s]</label>
+            <div class="row">
+              <input id="dint" class="ctl num" type="number" min="1" style="width:90px"
+                data-scope="defaults" data-key="polling_interval_s" data-type="num">
+              <span class="unit" id="cyclehint"></span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="dproto">Telegraf protocol</label>
+            <select id="dproto" class="ctl" data-scope="defaults" data-key="telegraf.protocol" data-type="str">
+              <option value="udp">udp — socket_listener</option>
+              <option value="tcp">tcp — socket_listener</option>
+              <option value="http">http — http_listener_v2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="daddr">Telegraf address : port</label>
+            <div class="row" style="min-width:0">
+              <input id="daddr" class="ctl" style="flex:1 1 80px;min-width:0;font-family:var(--mono);font-size:12.5px"
+                data-scope="defaults" data-key="telegraf.address" data-type="str">
+              <span class="unit" style="flex:0 0 auto">:</span>
+              <input id="dport" class="ctl num" type="number" style="flex:0 0 80px;width:80px"
+                data-scope="defaults" data-key="telegraf.port" data-type="int">
+            </div>
+          </div>
+          <div class="field">
+            <label for="dbucket">Bucket (tag <code>tlg_bucket</code>)</label>
+            <input id="dbucket" class="ctl" style="font-family:var(--mono);font-size:12.5px"
+              data-scope="defaults" data-key="telegraf.tlg_bucket" data-type="str">
+          </div>
+          <div class="fieldrow2">
+            <div class="field">
+              <label for="dres">Accuracy (resolution_index)</label>
+              <select id="dres" class="ctl" data-scope="defaults" data-key="resolution_index" data-type="int">
+                <option value="1">1 — fastest (16 bit)</option>
+                <option value="8">8 — best 16 bit</option>
+                <option value="9">9 — 24 bit (~20 ms/point)</option>
+                <option value="10">10 — 24 bit (~40 ms/point)</option>
+                <option value="11">11 — 24 bit (~80 ms/point)</option>
+                <option value="12">12 — 24 bit, best resolution (~160 ms/point)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dset">Settling (settling_factor)</label>
+              <select id="dset" class="ctl" data-scope="defaults" data-key="settling_factor" data-type="int">
+                <option value="0">Auto (0)</option>
+                <option value="1">1</option><option value="3">3</option>
+                <option value="5">5</option><option value="7">7</option>
+                <option value="9">9 (longest)</option>
+              </select>
+            </div>
+          </div>
+          <div class="calc">
+            Input ranges: each drop starts at <b>±0.1 V</b> and auto-widens per drop when a
+            reading goes out of range (±0.1 V ≈ −46 to +379 °C; ±1 V covers the full −200 to
+            850 °C span); it narrows again after 10 clean cycles. Active ranges are on the Advanced page.
+          </div>
+        </div>
+        <div class="form-foot">
+          <span class="note">Dropdowns and toggles apply on change · text fields: <b>Enter</b> applies, <b>Esc</b> reverts · requests coalesced to one per 30 ms</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="card-head">
+        <span class="eyebrow">Channels</span>
+        <h2>Channel settings &amp; status</h2>
+        <span class="note">● = overridden · empty text field = follow default · amber = pending (Enter applies), blue = applying</span>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead>
+            <tr class="groups">
+              <th colspan="2"></th>
+              <th colspan="4" class="sep">Acquisition</th>
+              <th colspan="4" class="sep">Telegraf</th>
+              <th colspan="3" class="sep">Status</th>
+            </tr>
+            <tr>
+              <th>CH</th><th>Name</th>
+              <th class="sep">Polling</th><th>Accuracy</th><th>Settling</th><th>Interval [s]</th>
+              <th class="sep">Telemetry</th><th>Destination</th><th>tlg_bucket</th><th>Extra tags</th>
+              <th class="sep num">Latest [°C]</th><th>Status</th><th>Updated</th>
+            </tr>
+          </thead>
+          <tbody id="tb-basic"></tbody>
+        </table>
+      </div>
+      <div class="card-body form-foot" style="padding-top:12px">
+        <span class="note">Channels that are OFF are excluded from acquisition and Telegraf output.
+        Telemetry Off = acquired and displayed, but not sent.
+        Name is editable and becomes the Telegraf <code>name</code> tag; the channel number is fixed.</span>
+      </div>
+    </section>
+  </section>
+
+  <section id="tab-advanced" hidden>
+    <section class="card" style="margin-bottom:16px">
+      <div class="card-head">
+        <span class="eyebrow">Console</span>
+        <h2>Console identity</h2>
+        <span class="note">Sent as Telegraf tag <code>console</code> on every record</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field" style="max-width:320px">
+            <label for="cname">Console name</label>
+            <input id="cname" class="ctl" style="font-family:var(--mono);font-size:12.5px"
+              data-scope="root" data-key="console_name" data-type="str">
+          </div>
+        </div>
+        <div class="form-foot">
+          <span class="note">Telegraf measurement <code>temperature</code> · tags: console, channel, name, tlg_bucket + extra tags · OFF channels are not sent</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span class="eyebrow">Wiring / Raw</span>
+        <h2>Advanced — wiring &amp; raw voltages</h2>
+        <span class="note">Rref and AIN mapping come from config/pt100.yaml (read-only) · voltages are the latest readings</span>
+      </div>
+      <div class="tblwrap">
+        <table>
+          <thead>
+            <tr class="groups">
+              <th colspan="2"></th>
+              <th colspan="3" class="sep">Wiring (pt100.yaml)</th>
+              <th colspan="4" class="sep">Range &amp; raw [mV]</th>
+              <th colspan="2" class="sep">Derived</th>
+              <th colspan="2" class="sep">Status</th>
+            </tr>
+            <tr>
+              <th>CH</th><th>Name</th>
+              <th class="sep num">Rref [Ω]</th><th>Rref AIN (+/−)</th><th>RTD AIN (+/−)</th>
+              <th class="sep">Active range (Rref / RTD)</th><th class="num">Vref</th><th class="num">Vrtd</th><th class="num">Sum</th>
+              <th class="sep num">R_RTD [Ω]</th><th class="num">Temp [°C]</th>
+              <th class="sep">Status</th><th>Updated</th>
+            </tr>
+          </thead>
+          <tbody id="tb-adv"></tbody>
+        </table>
+      </div>
+      <div class="card-body form-foot" style="padding-top:12px">
+        <span class="note">Sum (Vref + Vrtd) supports the excitation sanity check (nominal ≤ 160 mV).
+        Active ranges are per-drop auto-range states.
+        Status codes: OK · SHORT · OPEN · EXCLOSS · OVERRANGE · SUMERR · POLARITY · RANGE · COMM (OFF / NO DATA / STALE are UI-only).</span>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="card-head">
+        <span class="eyebrow">Test</span>
+        <h2>Channel test</h2>
+        <span class="note">Suspends telemetry and normal polling; reads all polling-ON channels in even interleave at maximum speed with the current Accuracy/Settling</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field" style="max-width:200px">
+            <label for="treads">Reads per channel</label>
+            <input id="treads" class="ctl num" type="number" value="8" min="1" style="width:90px" data-nosync="1">
+          </div>
+          <div class="field">
+            <label>Estimated duration</label>
+            <div id="testest" class="unit" style="min-height:30px;display:flex;align-items:center">—</div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="row">
+              <button id="tstart" class="btn">Start</button>
+              <button id="tabort" class="btn" disabled style="background:var(--ng);border-color:var(--ng)">Abort</button>
+              <span id="tprog" class="unit"></span>
+            </div>
+          </div>
+        </div>
+        <div id="treswrap" hidden>
+          <div class="tblwrap" style="margin-top:12px;border-top:1px solid var(--line)">
+            <table>
+              <thead>
+                <tr>
+                  <th>CH</th><th>Name</th><th class="num">Reads</th>
+                  <th class="num">Vref x̄ [mV]</th><th class="num">Vref σ [mV]</th>
+                  <th class="num">Vrtd x̄ [mV]</th><th class="num">Vrtd σ [mV]</th>
+                  <th class="num">R x̄ [Ω]</th><th class="num">T x̄ [°C]</th><th class="num">T σ [°C]</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tb-test"></tbody>
+            </table>
+          </div>
+          <div class="form-foot">
+            <a id="topen" class="btn" target="_blank" rel="noopener">Open HTML report</a>
+            <a id="thtml" class="btn" download>Download HTML</a>
+            <a id="tjson" class="btn" download>Download JSON</a>
+            <span class="note">Saved on the console machine under <code>reports/</code></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>
+  Pt100 Console · spec <code>docs/console-design.md</code> · wiring <code>config/pt100.yaml</code> ·
+  GUI sync per <code>gui-sync-pattern.md</code> (backend = master, this page = slave)
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var AMBER = "p-pending", BLUE = "p-confirm", RED = "p-reject", DEF = "__def";
+  var SNAP = null, built = false, lastOkMs = 0, errorMsg = null, expiryLeft = 60;
+  var reqCount = 0;
+  var barEl = document.getElementById("syncbar");
+
+  /* ================= helpers ================= */
+
+  function $(id) { return document.getElementById(id); }
+  function esc(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function fmt(value, decimals) {
+    return (value === null || value === undefined) ? "—" : Number(value).toFixed(decimals);
+  }
+  function hms(epochS) {
+    if (!epochS) return "—";
+    return new Date(epochS * 1000).toTimeString().slice(0, 8);
+  }
+  function rangeLabel(v) { return v ? ("±" + (v >= 1 ? v.toFixed(0) : v) + "") : "—"; }
+  function deepMerge(target, src) {
+    Object.keys(src).forEach(function (key) {
+      var value = src[key];
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        if (!target[key] || typeof target[key] !== "object") target[key] = {};
+        deepMerge(target[key], value);
+      } else {
+        target[key] = value;
+      }
+    });
+    return target;
+  }
+  function keyPathToObj(path, value) {
+    var parts = path.split(".");
+    var out = {}, cursor = out;
+    for (var i = 0; i < parts.length - 1; i++) { cursor = cursor[parts[i]] = {}; }
+    cursor[parts[parts.length - 1]] = value;
+    return out;
+  }
+
+  /* ================= control <-> diff mapping ================= */
+
+  function parseDest(text) {
+    var match = /^(udp|tcp|http):\/\/([^\s:\/]+):(\d{1,5})$/i.exec(text.trim());
+    if (!match) return null;
+    return { protocol: match[1].toLowerCase(), address: match[2], port: parseInt(match[3], 10) };
+  }
+  function parseTags(text) {
+    var out = {}, ok = true;
+    text.split(",").forEach(function (piece) {
+      piece = piece.trim();
+      if (!piece) return;
+      var idx = piece.indexOf("=");
+      if (idx <= 0) { ok = false; return; }
+      out[piece.slice(0, idx).trim()] = piece.slice(idx + 1).trim();
+    });
+    return ok ? out : null;
+  }
+
+  // Returns {diff} or {error} for one control's current value.
+  function controlDiff(el) {
+    var scope = el.dataset.scope, key = el.dataset.key, type = el.dataset.type;
+    var value;
+    if (el.type === "checkbox") {
+      value = el.checked;
+    } else {
+      value = el.value;
+    }
+    if (scope === "ch") {
+      // per-channel: DEF / empty string means "remove override"
+      if (el.tagName === "SELECT") {
+        if (value === DEF) value = null;
+        else if (type === "boolnull") value = (value === "on");
+        else if (type === "intnull") value = parseInt(value, 10);
+      } else if (String(value).trim() === "") {
+        value = null;
+      } else if (type === "numnull") {
+        value = parseFloat(value);
+        if (!isFinite(value) || value <= 0) return { error: "invalid interval" };
+      } else if (type === "dest") {
+        value = parseDest(String(value));
+        if (!value) return { error: "destination must be protocol://host:port" };
+      } else if (type === "tags") {
+        value = parseTags(String(value));
+        if (!value) return { error: "tags must be key=value, comma separated" };
+      }
+      var nested;
+      if (type === "dest") {
+        nested = { telegraf: value === null
+          ? { protocol: null, address: null, port: null } : value };
+      } else if (type === "tags") {
+        nested = { tags: value };
+      } else {
+        nested = keyPathToObj(key, value);
+      }
+      var channels = {};
+      channels[el.dataset.ch] = nested;
+      return { diff: { channels: channels } };
+    }
+    // defaults / root: value is required
+    if (type === "int") {
+      value = parseInt(value, 10);
+      if (!isFinite(value)) return { error: "invalid number" };
+    } else if (type === "num") {
+      value = parseFloat(value);
+      if (!isFinite(value) || value <= 0) return { error: "invalid number" };
+    } else if (type === "str") {
+      value = String(value);
+    }
+    if (scope === "root") { var r = {}; r[key] = value; return { diff: r }; }
+    return { diff: { defaults: keyPathToObj(key, value) } };
+  }
+
+  /* ================= transport: 30 ms coalescing drain ================= */
+
+  var pendingDiff = {}, inflight = false, cooldown = false;
+
+  function queueDiff(diff) {
+    deepMerge(pendingDiff, diff);
+    drain();
+  }
+  function drain() {
+    if (inflight || cooldown) return;
+    if (!Object.keys(pendingDiff).length) return;
+    var diff = pendingDiff;
+    pendingDiff = {};
+    inflight = true;
+    reqCount++;
+    $("c-req").textContent = reqCount;
+    cooldown = true;
+    setTimeout(function () { cooldown = false; drain(); }, 30);
+    fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(diff)
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      return resp.json();
+    }).then(function () {
+      settle(true, null);
+    }).catch(function (err) {
+      settle(false, String(err));
+    }).finally(function () {
+      inflight = false;
+      drain();
+    });
+  }
+  function settle(ok, message) {
+    document.querySelectorAll("." + BLUE).forEach(function (el) {
+      el.classList.remove(BLUE);
+      if (!ok && el.matches("input") && el.type !== "checkbox") el.classList.add(RED);
+      else if (ok && el.matches("input") && el.type !== "checkbox") el.defaultValue = el.value;
+    });
+    errorMsg = ok ? null : ("apply failed: " + message);
+    updateBanner();
+  }
+
+  /* ================= text-field state machine ================= */
+
+  function isTextCtl(el) {
+    return el.matches && el.matches("input.ctl") && el.type !== "checkbox" && !el.dataset.nosync;
+  }
+  document.addEventListener("input", function (event) {
+    var el = event.target;
+    if (!isTextCtl(el)) return;
+    expiryLeft = 60;
+    el.classList.remove(BLUE, RED);
+    el.classList.toggle(AMBER, el.value !== el.defaultValue);
+    updateBanner();
+  });
+  function commitAll() {
+    var fields = Array.prototype.slice.call(document.querySelectorAll("input.ctl." + AMBER));
+    if (!fields.length) return;
+    var merged = {};
+    var okFields = [];
+    fields.forEach(function (el) {
+      var result = controlDiff(el);
+      if (result.error) {
+        el.classList.remove(AMBER);
+        el.classList.add(RED);
+        errorMsg = result.error;
+        return;
+      }
+      deepMerge(merged, result.diff);
+      okFields.push(el);
+    });
+    okFields.forEach(function (el) { el.classList.remove(AMBER); el.classList.add(BLUE); });
+    updateBanner();
+    if (okFields.length) queueDiff(merged);
+  }
+  function revertAllPending() {
+    document.querySelectorAll("input.ctl." + AMBER + ", input.ctl." + RED).forEach(function (el) {
+      el.value = el.defaultValue;
+      el.classList.remove(AMBER, RED);
+    });
+    errorMsg = null;
+    updateBanner();
+  }
+  function escRevert(el) {
+    if (el && (el.classList.contains(AMBER) || el.classList.contains(RED))) {
+      el.value = el.defaultValue;
+      el.classList.remove(AMBER, RED);
+      updateBanner();
+    } else {
+      revertAllPending();
+    }
+  }
+  window.addEventListener("keydown", function (event) {
+    expiryLeft = 60;
+    var isEsc = event.key === "Escape" || event.key === "Esc";
+    if (isTextCtl(event.target)) {
+      if (event.key === "Enter") { event.preventDefault(); commitAll(); }
+      if (isEsc) { event.preventDefault(); event.stopPropagation(); escRevert(event.target); }
+    } else if (isEsc) {
+      revertAllPending();
+    }
+  }, true);
+
+  /* discrete controls commit immediately on change */
+  document.addEventListener("change", function (event) {
+    var el = event.target;
+    expiryLeft = 60;
+    if (el.dataset.nosync) return;
+    if (el.tagName === "SELECT" || el.type === "checkbox") {
+      var result = controlDiff(el);
+      if (result.error) { errorMsg = result.error; updateBanner(); return; }
+      el.classList.add(BLUE);
+      if (el.tagName === "SELECT") {
+        el.classList.toggle("overridden", el.value !== DEF && el.dataset.scope === "ch");
+        var dot = el.previousElementSibling;
+        if (dot && dot.classList.contains("ovdot")) {
+          dot.classList.toggle("on", el.value !== DEF);
+        }
+      }
+      updateBanner();
+      queueDiff(result.diff);
+    }
+  });
+
+  /* ================= status banner ================= */
+
+  function updateBanner() {
+    var pend = document.querySelectorAll("." + AMBER).length;
+    var conf = document.querySelectorAll("." + BLUE).length;
+    var staleS = lastOkMs ? (Date.now() - lastOkMs) / 1000 : null;
+    var msg, cls = "";
+    if (staleS === null) {
+      msg = "Connecting…";
+    } else if (staleS > 3) {
+      msg = "No response from backend for " + staleS.toFixed(0) + " s";
+      cls = "b-err";
+    } else {
+      msg = "Synced · " + new Date(lastOkMs).toTimeString().slice(0, 8);
+    }
+    if (pend) {
+      msg += " · " + pend + " pending — Enter applies, Esc reverts · auto-revert in " + expiryLeft + " s";
+      cls = cls || "b-pend";
+    }
+    if (conf) { msg += " · applying " + conf + "…"; cls = "b-conf"; }
+    if (errorMsg) { msg += " · " + errorMsg; cls = "b-err"; }
+    barEl.innerHTML = esc(msg) +
+      (pend ? ' <button id="revertall" class="minibtn" type="button">Revert all</button>' : "");
+    barEl.className = "syncbar " + cls;
+  }
+  barEl.addEventListener("click", function (event) {
+    if (event.target.id === "revertall") revertAllPending();
+  });
+  setInterval(function () {
+    if (document.querySelectorAll("." + AMBER).length) {
+      expiryLeft--;
+      if (expiryLeft <= 0) {
+        document.querySelectorAll("input.ctl." + AMBER).forEach(function (el) {
+          if (document.activeElement !== el) {
+            el.value = el.defaultValue;
+            el.classList.remove(AMBER);
+          }
+        });
+        expiryLeft = 60;
+      }
+    } else {
+      expiryLeft = 60;
+    }
+    updateBanner();
+  }, 1000);
+
+  /* ================= tabs ================= */
+
+  var tabs = document.querySelectorAll(".tabs button");
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabs.forEach(function (other) {
+        other.setAttribute("aria-selected", other === btn ? "true" : "false");
+      });
+      $("tab-basic").hidden = btn.dataset.tab !== "basic";
+      $("tab-advanced").hidden = btn.dataset.tab !== "advanced";
+    });
+  });
+
+  /* ================= table construction ================= */
+
+  function chSelect(cid, key, type, cls, options) {
+    var opts = options.map(function (o) {
+      return '<option value="' + o.v + '">' + esc(o.t) + "</option>";
+    }).join("");
+    return '<span class="ovdot"></span><select class="ctl ' + (cls || "") +
+      '" data-scope="ch" data-ch="' + cid + '" data-key="' + key +
+      '" data-type="' + type + '"><option value="' + DEF + '">Default</option>' +
+      opts + "</select>";
+  }
+  var ONOFF = [{ v: "on", t: "On" }, { v: "off", t: "Off" }];
+  var RES = ["1", "8", "9", "10", "11", "12"].map(function (v) { return { v: v, t: v }; });
+  var SET = ["0", "1", "3", "5", "9"].map(function (v) { return { v: v, t: v === "0" ? "Auto (0)" : v }; });
+
+  function buildTables(snap) {
+    var basic = "", adv = "";
+    snap.channels.forEach(function (ch) {
+      var cid = ch.id;
+      basic +=
+        '<tr data-ch="' + cid + '">' +
+        '<td class="id">' + cid + "</td>" +
+        '<td><input class="ctl namein" data-scope="ch" data-ch="' + cid +
+          '" data-key="name" data-type="strnull"></td>' +
+        '<td class="sep">' + chSelect(cid, "polling_enabled", "boolnull", "pollsel", ONOFF) + "</td>" +
+        "<td>" + chSelect(cid, "resolution_index", "intnull", "", RES) + "</td>" +
+        "<td>" + chSelect(cid, "settling_factor", "intnull", "", SET) + "</td>" +
+        '<td><input class="ctl num intin" type="number" min="1" data-scope="ch" data-ch="' + cid +
+          '" data-key="polling_interval_s" data-type="numnull"></td>' +
+        '<td class="sep">' + chSelect(cid, "telemetry_enabled", "boolnull", "", ONOFF) + "</td>" +
+        '<td><input class="ctl destin" data-scope="ch" data-ch="' + cid +
+          '" data-key="telegraf" data-type="dest"></td>' +
+        '<td><input class="ctl bucketin" data-scope="ch" data-ch="' + cid +
+          '" data-key="telegraf.tlg_bucket" data-type="strnull"></td>' +
+        '<td><input class="ctl tagin" placeholder="key=value, …" data-scope="ch" data-ch="' + cid +
+          '" data-key="tags" data-type="tags"></td>' +
+        '<td class="sep temp" data-cell="t">—</td>' +
+        '<td data-cell="status"></td>' +
+        '<td class="time" data-cell="updated">—</td>' +
+        "</tr>";
+      adv +=
+        '<tr data-ch="' + cid + '">' +
+        '<td class="id">' + cid + "</td>" +
+        '<td data-cell="name"></td>' +
+        '<td class="sep num">' + ch.wiring.rref_ohms.toFixed(3) + "</td>" +
+        '<td class="num">AIN' + ch.wiring.rref[0] + " / AIN" + ch.wiring.rref[1] + "</td>" +
+        '<td class="num">AIN' + ch.wiring.rtd[0] + " / AIN" + ch.wiring.rtd[1] + "</td>" +
+        '<td class="sep rng" data-cell="range">—</td>' +
+        '<td class="num" data-cell="vref">—</td>' +
+        '<td class="num" data-cell="vrtd">—</td>' +
+        '<td class="num" data-cell="sum">—</td>' +
+        '<td class="sep num" data-cell="r">—</td>' +
+        '<td class="num" data-cell="t">—</td>' +
+        '<td class="sep" data-cell="status"></td>' +
+        '<td class="time" data-cell="updated">—</td>' +
+        "</tr>";
+    });
+    $("tb-basic").innerHTML = basic;
+    $("tb-adv").innerHTML = adv;
+  }
+
+  /* ================= reconciliation ================= */
+
+  function busy(el) {
+    return el === document.activeElement ||
+      el.classList.contains(AMBER) || el.classList.contains(BLUE) || el.classList.contains(RED);
+  }
+  function setSelect(el, hasOverride, displayValue) {
+    if (busy(el)) return;
+    el.value = hasOverride ? displayValue : DEF;
+    el.classList.toggle("overridden", hasOverride);
+    var dot = el.previousElementSibling;
+    if (dot && dot.classList.contains("ovdot")) dot.classList.toggle("on", hasOverride);
+  }
+  function setText(el, value, placeholder) {
+    el.placeholder = placeholder === undefined || placeholder === null ? "" : String(placeholder);
+    if (busy(el)) return;
+    var text = value === undefined || value === null ? "" : String(value);
+    el.value = text;
+    el.defaultValue = text;
+  }
+  function setCheckbox(el, value) {
+    if (busy(el)) return;
+    el.checked = !!value;
+  }
+  function pillHtml(m) {
+    var cls = m.status === "OK" ? "ok" : (m.status === "OFF" || m.status === "NODATA") ? "off" : "ng";
+    var label = m.status === "NODATA" ? "NO DATA" : m.status;
+    if (m.stale) label += " · STALE";
+    var html = '<span class="pill ' + cls + '">' + esc(label) + "</span>";
+    if (m.detail && cls === "ng") html += '<div class="reason">' + esc(m.detail) + "</div>";
+    return html;
+  }
+
+  function reconcile(snap) {
+    SNAP = snap;
+    var d = snap.defaults;
+    /* chips */
+    $("c-name").textContent = snap.console_name;
+    var hwChip = $("c-hw");
+    hwChip.innerHTML = "U6-Pro <b>" + esc(snap.hw.serial || "?") + "</b> " +
+      (snap.hw.connected ? "connected" : "disconnected");
+    hwChip.classList.toggle("err", !snap.hw.connected && !!snap.hw.error);
+    hwChip.title = snap.hw.error || "";
+    $("c-acq").textContent = snap.meta.acquiring + "/" + snap.meta.total + " ch";
+    $("c-cycle").textContent = snap.meta.cycle_s ? snap.meta.cycle_s.toFixed(1) + " s" : "—";
+    var destText = d.telegraf.protocol + "://" + d.telegraf.address + ":" + d.telegraf.port;
+    var tlgChip = $("c-tlg");
+    tlgChip.innerHTML = "Telegraf <b>" + esc(destText) + "</b>" +
+      (snap.meta.telegraf_error ? " !" : "");
+    tlgChip.classList.toggle("err", !!snap.meta.telegraf_error);
+    tlgChip.title = snap.meta.telegraf_error || "";
+    $("cyclehint").textContent = snap.meta.cycle_s
+      ? "effective floor ≈ measured cycle " + snap.meta.cycle_s.toFixed(1) + " s" : "";
+
+    /* defaults form + console name */
+    setCheckbox($("dpoll"), d.polling_enabled);
+    setCheckbox($("dtm"), d.telemetry_enabled);
+    setText($("dint"), d.polling_interval_s, "");
+    if (!busy($("dproto"))) $("dproto").value = d.telegraf.protocol;
+    setText($("daddr"), d.telegraf.address, "");
+    setText($("dport"), d.telegraf.port, "");
+    setText($("dbucket"), d.telegraf.tlg_bucket, "");
+    if (!busy($("dres"))) $("dres").value = String(d.resolution_index);
+    if (!busy($("dset"))) {
+      var setSel = $("dset");
+      if (![].some.call(setSel.options, function (o) { return o.value === String(d.settling_factor); })) {
+        setSel.add(new Option(String(d.settling_factor), String(d.settling_factor)));
+      }
+      setSel.value = String(d.settling_factor);
+    }
+    setText($("cname"), snap.console_name, "");
+
+    /* channel rows */
+    snap.channels.forEach(function (ch) {
+      var row = document.querySelector('#tb-basic tr[data-ch="' + ch.id + '"]');
+      var advRow = document.querySelector('#tb-adv tr[data-ch="' + ch.id + '"]');
+      if (!row || !advRow) return;
+      var ov = ch.overrides || {};
+      var ovTlg = ov.telegraf || {};
+      var polled = !!ch.effective.polling_enabled;
+      row.classList.toggle("is-off", !polled);
+      advRow.classList.toggle("is-off", !polled);
+
+      setText(row.querySelector(".namein"), ov.name, ch.hw_name);
+      var selects = row.querySelectorAll("select");
+      var defOnOff = function (flag) { return flag ? "On" : "Off"; };
+      /* polling, accuracy, settling, telemetry selects (DOM order) */
+      var pollSel = selects[0], resSel = selects[1], setSel2 = selects[2], tmSel = selects[3];
+      pollSel.options[0].text = "Default (" + defOnOff(d.polling_enabled) + ")";
+      resSel.options[0].text = "Default (" + d.resolution_index + ")";
+      setSel2.options[0].text = "Default (" + (d.settling_factor === 0 ? "auto" : d.settling_factor) + ")";
+      tmSel.options[0].text = "Default (" + defOnOff(d.telemetry_enabled) + ")";
+      setSelect(pollSel, "polling_enabled" in ov, ov.polling_enabled ? "on" : "off");
+      setSelect(resSel, "resolution_index" in ov, String(ov.resolution_index));
+      setSelect(setSel2, "settling_factor" in ov, String(ov.settling_factor));
+      setSelect(tmSel, "telemetry_enabled" in ov, ov.telemetry_enabled ? "on" : "off");
+      setText(row.querySelector(".intin"), ov.polling_interval_s, d.polling_interval_s);
+      var destOverride = ("protocol" in ovTlg) || ("address" in ovTlg) || ("port" in ovTlg);
+      var effTlg = ch.effective.telegraf;
+      setText(
+        row.querySelector(".destin"),
+        destOverride
+          ? effTlg.protocol + "://" + effTlg.address + ":" + effTlg.port
+          : null,
+        destText
+      );
+      setText(
+        row.querySelector(".bucketin"),
+        "tlg_bucket" in ovTlg ? ovTlg.tlg_bucket : null,
+        d.telegraf.tlg_bucket || "(unset)"
+      );
+      var tagsText = Object.keys(ov.tags || {}).map(function (key) {
+        return key + "=" + ov.tags[key];
+      }).join(", ");
+      setText(row.querySelector(".tagin"), tagsText || null, "key=value, …");
+
+      /* measurements (unconditional) */
+      var m = ch.m;
+      row.querySelector('[data-cell="t"]').textContent = fmt(m.t_c, 2);
+      row.querySelector('[data-cell="status"]').innerHTML = pillHtml(m);
+      row.querySelector('[data-cell="updated"]').textContent = hms(m.updated);
+      advRow.querySelector('[data-cell="name"]').textContent = ch.name;
+      advRow.querySelector('[data-cell="range"]').textContent =
+        m.range_ref_v ? rangeLabel(m.range_ref_v) + " / " + rangeLabel(m.range_rtd_v) + " V" : "—";
+      advRow.querySelector('[data-cell="vref"]').textContent =
+        m.vref_v === null ? "—" : (m.vref_v * 1000).toFixed(3);
+      advRow.querySelector('[data-cell="vrtd"]').textContent =
+        m.vrtd_v === null ? "—" : (m.vrtd_v * 1000).toFixed(3);
+      advRow.querySelector('[data-cell="sum"]').textContent =
+        m.vref_v === null ? "—" : ((m.vref_v + m.vrtd_v) * 1000).toFixed(3);
+      advRow.querySelector('[data-cell="r"]').textContent = fmt(m.r_ohm, 4);
+      advRow.querySelector('[data-cell="t"]').textContent = fmt(m.t_c, 3);
+      advRow.querySelector('[data-cell="status"]').innerHTML = pillHtml(m);
+      advRow.querySelector('[data-cell="updated"]').textContent = hms(m.updated);
+    });
+
+    reconcileTest(snap);
+    updateEstimate();
+  }
+
+  /* ================= channel test ================= */
+
+  var lastReportHtml = null;
+  function pointSeconds() {
+    if (SNAP && SNAP.meta.point_s) return SNAP.meta.point_s;
+    var table = { 1: 0.004, 8: 0.006, 9: 0.024, 10: 0.044, 11: 0.084, 12: 0.164 };
+    var res = SNAP ? SNAP.defaults.resolution_index : 12;
+    return table[res] || 0.164;
+  }
+  function updateEstimate() {
+    var reads = Math.max(1, parseInt($("treads").value, 10) || 1);
+    var channels = SNAP ? SNAP.meta.acquiring : 0;
+    var point = pointSeconds();
+    $("testest").textContent = channels
+      ? channels + " ch × " + reads + " reads × 2 points × ~" + Math.round(point * 1000) +
+        " ms ≈ " + (channels * reads * 2 * point).toFixed(1) + " s"
+      : "no channels are polling — enable polling first";
+  }
+  $("treads").addEventListener("input", updateEstimate);
+
+  $("tstart").addEventListener("click", function () {
+    var reads = Math.max(1, parseInt($("treads").value, 10) || 1);
+    fetch("/api/test/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reads: reads })
+    }).then(function (resp) { return resp.json(); }).then(function (body) {
+      if (!body.ok) { errorMsg = body.error || "cannot start test"; updateBanner(); }
+    }).catch(function (err) { errorMsg = String(err); updateBanner(); });
+  });
+  $("tabort").addEventListener("click", function () {
+    fetch("/api/test/abort", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  });
+
+  function reconcileTest(snap) {
+    var test = snap.test || {};
+    $("tstart").disabled = !!test.running;
+    $("tabort").disabled = !test.running;
+    if (test.running) {
+      $("tprog").textContent = "acquiring " + test.done + "/" + test.total + " points — telemetry suspended";
+      return;
+    }
+    if (!test.result) { if (!$("treswrap").hidden) return; $("tprog").textContent = ""; return; }
+    var meta = test.meta || {};
+    $("tprog").textContent = (test.aborted ? "aborted — partial results kept" : "completed") +
+      " · " + (meta.elapsed_s || 0).toFixed(1) + " s · " +
+      (meta.channel_reads_per_s || 0).toFixed(2) + " channel reads/s · " +
+      (meta.ain_points_per_s || 0).toFixed(2) + " points/s";
+    if (test.report_html && test.report_html !== lastReportHtml) {
+      lastReportHtml = test.report_html;
+      $("tb-test").innerHTML = test.result.map(function (row) {
+        var pill = row.status === "OK"
+          ? '<span class="pill ok">OK</span>'
+          : '<span class="pill ng">' + esc(row.status) + "</span>";
+        return "<tr><td class=\"id\">" + row.ch + "</td><td>" + esc(row.name) + "</td>" +
+          '<td class="num">' + row.reads + "</td>" +
+          '<td class="num">' + fmt(row.vref_mean_mv, 4) + "</td>" +
+          '<td class="num">' + fmt(row.vref_sd_mv, 4) + "</td>" +
+          '<td class="num">' + fmt(row.vrtd_mean_mv, 4) + "</td>" +
+          '<td class="num">' + fmt(row.vrtd_sd_mv, 4) + "</td>" +
+          '<td class="num">' + fmt(row.r_mean_ohm, 4) + "</td>" +
+          '<td class="num">' + fmt(row.t_mean_c, 4) + "</td>" +
+          '<td class="num">' + fmt(row.t_sd_c, 4) + "</td>" +
+          "<td>" + pill + "</td></tr>";
+      }).join("");
+      $("topen").href = "/reports/" + test.report_html;
+      $("thtml").href = "/reports/" + test.report_html;
+      $("thtml").setAttribute("download", test.report_html);
+      $("tjson").href = "/reports/" + test.report_json;
+      $("tjson").setAttribute("download", test.report_json);
+      $("treswrap").hidden = false;
+    }
+  }
+
+  /* ================= snapshot polling (100 ms) ================= */
+
+  var snapInflight = false;
+  setInterval(function () {
+    if (snapInflight) return;
+    snapInflight = true;
+    fetch("/api/snapshot").then(function (resp) {
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      return resp.json();
+    }).then(function (snap) {
+      lastOkMs = Date.now();
+      if (!built) { buildTables(snap); built = true; }
+      reconcile(snap);
+      updateBanner();
+    }).catch(function () {
+      /* staleness surfaces via the banner clock */
+    }).finally(function () {
+      snapInflight = false;
+    });
+  }, 100);
+  updateBanner();
+})();
+</script>
+</body>
+</html>
