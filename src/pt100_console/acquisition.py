@@ -153,7 +153,7 @@ class AcquisitionLoop(threading.Thread):
         self.hw = hardware
         self.sender = sender
         self.wake = config.change_event
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self._lock = threading.Lock()
         self._states = {cid: ChannelState() for cid in hardware["sensors"]}
         self._reader: Optional[U6Pt100Reader] = None
@@ -176,7 +176,7 @@ class AcquisitionLoop(threading.Thread):
     # ---- public API ------------------------------------------------------
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
         self._test_abort.set()
         self.wake.set()
         self.join(timeout=15)
@@ -221,7 +221,7 @@ class AcquisitionLoop(threading.Thread):
 
     def run(self) -> None:  # noqa: C901
         log.info("acquisition loop started (%d sensors)", len(self._states))
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             with self._lock:
                 request = self._test_req
                 self._test_req = None
@@ -435,7 +435,7 @@ class AcquisitionLoop(threading.Thread):
         aborted = False
         for _ in range(reads):
             for cid in enabled:
-                if self._test_abort.is_set() or self._stop.is_set():
+                if self._test_abort.is_set() or self._stop_event.is_set():
                     aborted = True
                     break
                 sample = self._acquire(cid, self.config.effective(cid))

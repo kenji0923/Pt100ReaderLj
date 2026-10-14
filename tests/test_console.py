@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from pt100_console.acquisition import (
+    AcquisitionLoop,
     DropState,
     GAIN_LIMITS,
     STEPDOWN_CYCLES,
@@ -13,7 +14,7 @@ from pt100_console.acquisition import (
     read_drop,
 )
 from pt100_console.config import ConsoleConfig, ensure_console_yaml
-from pt100_console.telegraf import build_line
+from pt100_console.telegraf import TelegrafSender, build_line
 
 from pt100_reader import DifferentialInput
 
@@ -171,6 +172,34 @@ class ConfigTests(unittest.TestCase):
         config.flush()
         reloaded = ConsoleConfig(config.path)
         self.assertEqual(reloaded.console_name, "bench-2")
+
+
+class AcquisitionLoopLifecycleTests(unittest.TestCase):
+    def test_stop_joins_cleanly(self):
+        # Regression: an Event stored as ``_stop`` shadowed Thread._stop(), so
+        # join() raised TypeError and the shutdown flush was skipped.
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "config" / "console.yaml"
+        ensure_console_yaml(path)
+        config = ConsoleConfig(path)  # polling starts Off: no hardware access
+        hardware = {
+            "serial": None,
+            "sensors": {
+                1: {
+                    "name": "pt100_01",
+                    "rref_ohms": 140.0,
+                    "rref": DifferentialInput(48, 56),
+                    "rtd": DifferentialInput(49, 57),
+                }
+            },
+        }
+        sender = TelegrafSender()
+        self.addCleanup(sender.close)
+        loop = AcquisitionLoop(config, hardware, sender)
+        loop.start()
+        loop.stop()
+        self.assertFalse(loop.is_alive())
 
 
 class TelegrafLineTests(unittest.TestCase):

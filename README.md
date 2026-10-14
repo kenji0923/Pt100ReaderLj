@@ -180,3 +180,18 @@ No LabJack is required for the unit tests:
 ```shell
 python -m unittest discover -s tests -v
 ```
+
+To check that the web console shuts down cleanly on SIGTERM (exit status 0,
+pending settings flushed) without touching the LabJack, run a throwaway
+instance with a fresh configuration (polling starts Off) on a spare port:
+
+```shell
+mkdir -p /tmp/pt100-e2e/config
+python -m pt100_console --config /tmp/pt100-e2e/config/console.yaml \
+  --host 127.0.0.1 --port 18091 &
+sleep 1                                            # wait for the listener
+curl -s -X POST -d '{"console_name":"e2e-flush"}' \
+  http://127.0.0.1:18091/api/settings
+kill -TERM $!; wait $!; echo "exit=$?"            # expect exit=0
+grep console_name /tmp/pt100-e2e/config/console.yaml  # expect e2e-flush
+```
