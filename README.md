@@ -156,6 +156,23 @@ Off so the console can be configured before any data is sent. Open
 documented in [`docs/console-design.md`](docs/console-design.md); a systemd
 unit example is in [`deploy/pt100-console.service`](deploy/pt100-console.service).
 
+### Changing the listen address of a running deployment
+
+The bind address is `server.host` in `config/console.yaml` (`0.0.0.0` = all
+interfaces; `--host` on the command line overrides it). The console writes its
+in-memory configuration back to this file on shutdown, so a plain edit followed
+by a restart is overwritten. Edit the file, have the running process reload it
+with SIGHUP, then restart so the new address is bound:
+
+```shell
+# e.g. restrict the deployment under /opt to the lab network interface
+sed -i '/^server:/,/^[^ ]/ s/^  host: .*/  host: 192.168.1.5/' \
+  /opt/Pt100ReaderLj/Pt100ReaderLj/config/console.yaml
+sudo systemctl reload pt100-console    # SIGHUP: reload console.yaml into memory
+sudo systemctl restart pt100-console   # rebind on the new address
+ss -tlnp | grep 8091                   # expect 192.168.1.5:8091 only
+```
+
 ## Run unit tests
 
 No LabJack is required for the unit tests:
